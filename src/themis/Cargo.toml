@@ -1,0 +1,8 @@
+[package]
+name = "themis"
+version = "0.1.0"
+edition = "2018"
+authors = ["rust-themis developers"]
+
+[dependencies]
+soter = { path = "../soter", version = "^0.1.0" }
