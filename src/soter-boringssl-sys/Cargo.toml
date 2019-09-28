@@ -3,6 +3,3 @@ name = "soter-boringssl-sys"
 version = "0.1.0"
 edition = "2018"
 authors = ["rust-themis developers"]
-
-[build-dependencies]
-goblin = "0.0.24"
