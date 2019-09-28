@@ -97,7 +97,7 @@ fn main() {
             "util/read_symbols.go",
             "-out",
             &abs_symbol_file,
-            &format!("{}/crypto/libcrypto.a", &abs_build_dir_1),
+            &format!("{}/crypto/{}", &abs_build_dir_1, lib("crypto")),
         ],
     );
 
@@ -115,31 +115,11 @@ fn main() {
     // We symlink if possible to avoid rebuilding libcrypto.a and avoid copying it.
     //
 
-    #[cfg(unix)]
-    let res = std::os::unix::fs::symlink(
-        format!("{}/crypto/libcrypto.a", abs_build_dir_2),
-        format!(
-            "{}/crypto/libsoter_crypto_{}.a",
-            abs_build_dir_2, version_string
-        ),
-    );
-    #[cfg(windows)]
-    let res = std::os::windows::fs::symlink_file(
-        format!("{}/crypto/libcrypto.a", abs_build_dir_2),
-        format!(
-            "{}/crypto/libsoter_crypto_{}.a",
-            abs_build_dir_2, version_string
-        ),
-    );
-    #[cfg(not(any(unix, windows)))]
-    let res = fs::rename(
-        format!("{}/crypto/libcrypto.a", abs_build_dir_2),
-        format!(
-            "{}/crypto/libsoter_crypto_{}.a",
-            abs_build_dir_2, version_string
-        ),
-    );
-    if let Err(err) = res {
+    let crypto = format!("{}/crypto/{}", &abs_build_dir_2, lib("crypto"));
+    let soter_crypto = format!("soter_crypto_{}", version_string);
+    let soter_crypto = format!("{}/crypto/{}", &abs_build_dir_2, lib(&soter_crypto));
+
+    if let Err(err) = symlink_from_to(&crypto, &soter_crypto) {
         // If the error is an AlreadyExists error, that just means we've already compiled before.
         if err.kind() != std::io::ErrorKind::AlreadyExists {
             panic!("could not symlink to libcrypto.a: {}", err)
@@ -247,5 +227,23 @@ fn built_with(abs_dir: &str) -> Option<BuildSystem> {
         Some(BuildSystem::Make)
     } else {
         None
+    }
+}
+
+fn symlink_from_to(from: &str, to: &str) -> std::io::Result<()> {
+    #[cfg(unix)]
+    return std::os::unix::fs::symlink(from, to);
+    #[cfg(windows)]
+    return std::os::windows::fs::symlink_file(from, to);
+    #[cfg(not(any(unix, windows)))]
+    return fs::rename(from, to);
+}
+
+fn lib(name: &str) -> String {
+    // TODO: ensure that we support both *-pc-windows-msvc and *-pc-windows-gnu
+    if cfg!(windows) {
+        format!("{}.lib", name)
+    } else {
+        format!("lib{}.a", name)
     }
 }
