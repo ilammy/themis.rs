@@ -6,15 +6,9 @@
 
 //! Build BoringSSL static library with properly renamed symbols.
 
-use std::collections::BTreeSet;
-use std::convert::TryFrom;
 use std::env;
-use std::error::Error;
 use std::fs;
-use std::io::{Read, Write};
 use std::process::{Command, Stdio};
-
-use goblin::{self, elf, mach};
 
 // Relative to CARGO_MANIFEST_DIR
 const BORINGSSL_SRC: &str = "boringssl";
@@ -90,51 +84,22 @@ fn main() {
     build(&abs_build_dir_1, &[&abs_boringssl_src]);
 
     //
-    // After that we list all symbols present in the resulting static libraries and massage them.
+    // After that we list all symbols present in the resulting static libraries and run the build
+    // again with enabled prefixes.
     //
 
-    let mut symbols = exported_symbols(&format!("{}/crypto/libcrypto.a", &abs_build_dir_1))
-        .unwrap_or_else(|e| {
-            panic!(
-                "failed to read list of symbols exported by libcrypto: {}",
-                e
-            )
-        });
-    if symbols.is_empty() {
-        panic!("no exported symbols found in libcrypto");
-    }
+    env::set_current_dir(&abs_boringssl_src).expect("failed to cd to BoringSSL directory");
 
-    // Inlined functions from the compiler or runtime, should not be prefixed.
-    let symbol_blacklist = [
-        // Present in Windows builds.
-        "__local_stdio_printf_options",
-        "__local_stdio_scanf_options",
-        "_vscprintf",
-        "_vscprintf_l",
-        "_vsscanf_l",
-        "_xmm",
-        "sscanf",
-        "vsnprintf",
-        // Present in Linux and macOS builds.
-        "sdallocx",
-    ];
-    for blacklisted_symbol in &symbol_blacklist {
-        symbols.remove(*blacklisted_symbol);
-    }
-
-    let mut symbols_file =
-        fs::File::create(&abs_symbol_file).expect("could not create symbols file");
-    for symbol in symbols {
-        write!(symbols_file, "{}\n", symbol).expect("write to symbols file failed");
-    }
-    symbols_file
-        .sync_all()
-        .expect("failed to sync the symbols file to filesystem");
-
-    //
-    // Now we're ready for the second build telling CMake to rename symbols we're interested in.
-    // After that we rename the produced library and pass linkage instructions via Cargo.
-    //
+    run(
+        "go",
+        &[
+            "run",
+            "util/read_symbols.go",
+            "-out",
+            &abs_symbol_file,
+            &format!("{}/crypto/libcrypto.a", &abs_build_dir_1),
+        ],
+    );
 
     build(
         &abs_build_dir_2,
@@ -145,21 +110,34 @@ fn main() {
         ],
     );
 
+    //
+    // After that we rename the produced library and pass linkage instructions via Cargo.
     // We symlink if possible to avoid rebuilding libcrypto.a and avoid copying it.
+    //
+
     #[cfg(unix)]
     let res = std::os::unix::fs::symlink(
         format!("{}/crypto/libcrypto.a", abs_build_dir_2),
-        format!("{}/crypto/libsoter_crypto_{}.a", abs_build_dir_2, version_string),
+        format!(
+            "{}/crypto/libsoter_crypto_{}.a",
+            abs_build_dir_2, version_string
+        ),
     );
     #[cfg(windows)]
     let res = std::os::windows::fs::symlink_file(
         format!("{}/crypto/libcrypto.a", abs_build_dir_2),
-        format!("{}/crypto/libsoter_crypto_{}.a", abs_build_dir_2, version_string),
+        format!(
+            "{}/crypto/libsoter_crypto_{}.a",
+            abs_build_dir_2, version_string
+        ),
     );
     #[cfg(not(any(unix, windows)))]
     let res = fs::rename(
         format!("{}/crypto/libcrypto.a", abs_build_dir_2),
-        format!("{}/crypto/libsoter_crypto_{}.a", abs_build_dir_2, version_string),
+        format!(
+            "{}/crypto/libsoter_crypto_{}.a",
+            abs_build_dir_2, version_string
+        ),
     );
     if let Err(err) = res {
         // If the error is an AlreadyExists error, that just means we've already compiled before.
@@ -270,80 +248,4 @@ fn built_with(abs_dir: &str) -> Option<BuildSystem> {
     } else {
         None
     }
-}
-
-fn exported_symbols(file: &str) -> Result<BTreeSet<String>, Box<dyn Error>> {
-    let mut bytes = Vec::new();
-    fs::File::open(file)?.read_to_end(&mut bytes)?;
-    binary_exported_symbols(&bytes)
-}
-
-fn binary_exported_symbols(bytes: &[u8]) -> Result<BTreeSet<String>, Box<dyn Error>> {
-    let mut symbols = BTreeSet::new();
-    match goblin::Object::parse(bytes)? {
-        goblin::Object::Archive(archive) => {
-            for (_member_name, member, _symbol_table) in archive.summarize() {
-                // Member size is likely to be reported incorrectly by its header.
-                assert!(
-                    member.offset + (member.size() as u64) <= (bytes.len() as u64),
-                    format!(
-                        "archive member is outside of boundaries; offset: {}, size: {}",
-                        member.offset,
-                        member.size()
-                    )
-                );
-                symbols.extend(binary_exported_symbols(
-                    &bytes[member.offset as usize..member.offset as usize + member.size()],
-                )?);
-            }
-        }
-        goblin::Object::Elf(elf) => {
-            for symbol in elf.syms.iter() {
-                let name = elf
-                    .strtab
-                    .get(symbol.st_name)
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "incorrect symbol name table offset {} for: {:?}",
-                            symbol.st_name, symbol
-                        )
-                    })
-                    .expect("failed to read symbol name");
-                if !name.is_empty()
-                    && symbol.st_bind() != elf::sym::STB_LOCAL
-                    && u32::try_from(symbol.st_shndx).unwrap() != elf::section_header::SHN_UNDEF
-                {
-                    symbols.insert(name.to_string());
-                }
-            }
-        }
-        goblin::Object::Mach(mach) => match mach {
-            mach::Mach::Binary(obj) => {
-                for symbol in obj.symbols() {
-                    let (name, nlist) = symbol?;
-                    if nlist.is_global() && !nlist.is_undefined() {
-                        // Strip underscore symbol prefix.
-                        symbols.insert(name[1..].to_string());
-                    }
-                }
-            }
-            mach::Mach::Fat(_obj) => panic!("unexpected multiarch Mach-O binary found in archive"),
-        },
-        // Symbols are stripped out of PE file.
-        goblin::Object::PE(_pe) => panic!("unexpected PE executable found in archive"),
-        // goblin::Object::parse doesn't detect COFF binaries.
-        goblin::Object::Unknown(_magic) => {
-            let coff = goblin::pe::Coff::parse(bytes)?;
-            for (_size, _name, symbol) in coff.symbols.iter() {
-                if symbol.section_number != goblin::pe::symbol::IMAGE_SYM_UNDEFINED
-                    && symbol.storage_class == goblin::pe::symbol::IMAGE_SYM_CLASS_EXTERNAL
-                {
-                    // _name will only be populated for names no longer than 8 characters,
-                    // otherwise string table lookup is necessary.
-                    symbols.insert(symbol.name(&coff.strings)?.to_string());
-                }
-            }
-        }
-    };
-    Ok(symbols)
 }
