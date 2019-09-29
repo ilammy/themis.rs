@@ -14,4 +14,4 @@ And because it's fun to rewrite stuff in Rust, obviously.
 
 ## License
 
-The code is distributed under [**Apache License 2.0**](LICENSE).
+The code is distributed under [**Apache License 2.0**](LICENSE), unless noted otherwise.
