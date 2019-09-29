@@ -6,36 +6,41 @@ on:
     - master
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-10.14, ubuntu-18.04, windows-2019]
-        rust: [stable]
-
+  test-macos:
+    runs-on: macos-10.14
     steps:
     - name: Set up Rust toolchain
-      if: matrix.os == 'macos-10.14'
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: ${{ matrix.rust }}
+        toolchain: stable
+    - name: Check out code
+      uses: actions/checkout@v1
+      with:
+        submodules: true
+    - name: Run all tests
+      run: cargo test
+
+  test-ubuntu:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v1
+      with:
+        submodules: true
+    - name: Run all tests
+      run: cargo test
+
+  test-windows:
+    runs-on: windows-2019
+    steps:
     - name: 'Set up BoringSSL dependencies: Ninja'
-      if: matrix.os == 'windows-2019'
       uses: seanmiddleditch/gha-setup-ninja@master
       with:
         destination: ../ninja-build
     - name: 'Set up BoringSSL dependencies: NASM'
-      if: matrix.os == 'windows-2019'
-      run: choco install nasm
+      uses: ilammy/setup-nasm@v1
     - name: Set up Microsoft Visual C++ environment
-      if: matrix.os == 'windows-2019'
-      run: |
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        echo ::set-env name=PATH::%PATH%
-        echo ::set-env name=INCLUDE::%INCLUDE%
-        echo ::set-env name=LIB::%LIB%
-        echo ::set-env name=LIBPATH::%LIBPATH%
+      uses: ilammy/msvc-dev-cmd@v1
     - name: Check out code
       uses: actions/checkout@v1
       with:
