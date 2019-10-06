@@ -12,11 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// We follow BoringSSL naming convention, allow it.
-#![allow(non_snake_case)]
+use crate::error::{default_error, Result};
 
-mod error;
-mod rand;
+/// Puts cryptographically strong pseudo-random bytes into `buf`.
+pub fn RAND_bytes(buf: &mut [u8]) -> Result {
+    let err = unsafe { boringssl::RAND_bytes(buf.as_mut_ptr(), buf.len()) };
+    default_error(err)
+}
 
-pub use error::Result;
-pub use rand::RAND_bytes;
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_buffer() {
+        assert!(RAND_bytes(&mut []).is_ok());
+    }
+
+    #[test]
+    fn normal_buffer() {
+        let mut buffer = [0; 32];
+        assert!(RAND_bytes(&mut buffer).is_ok());
+    }
+}

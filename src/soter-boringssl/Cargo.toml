@@ -5,4 +5,4 @@ edition = "2018"
 authors = ["rust-themis developers"]
 
 [dependencies]
-soter-boringssl-sys = { path = "../soter-boringssl-sys", version = "=0.1.0" }
+boringssl = { package = "soter-boringssl-sys", version = "=0.1.0", path = "../soter-boringssl-sys" }

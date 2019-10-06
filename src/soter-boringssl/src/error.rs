@@ -12,11 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// We follow BoringSSL naming convention, allow it.
-#![allow(non_snake_case)]
+use std::os::raw::c_int;
+use std::result;
 
-mod error;
-mod rand;
+/// Result of BoringSSL function calls.
+///
+/// `Err` contains result code returned by BoringSSL. Normally it is zero,
+/// but negative values may indicate individual errors. Consult BoringSSL
+/// documentation for individual functions.
+pub type Result = result::Result<(), i32>;
 
-pub use error::Result;
-pub use rand::RAND_bytes;
+/// Handles BoringSSL’s default error code convention.
+pub fn default_error(result: c_int) -> Result {
+    match result {
+        1 => Ok(()),
+        _ => Err(result),
+    }
+}
