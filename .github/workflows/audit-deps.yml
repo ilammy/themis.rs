@@ -1,0 +1,22 @@
+name: Audit dependencies
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # every day at 6:00 UTC
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v1
+      # Preinstall a cached version to speed up the build
+      - name: Install cargo-audit
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-audit
+          use-tool-cache: true
+      - name: Audit dependencies
+        uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

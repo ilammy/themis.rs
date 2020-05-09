@@ -2,48 +2,83 @@ name: Build checks
 
 on:
   pull_request:
+  push:
     branches:
-    - master
+      - master
+  schedule:
+    - cron: '0 6 * * *' # every day at 6:00 UTC
+
+env:
+  RUSTFLAGS: -D warnings
 
 jobs:
-  test-macos:
-    runs-on: macos-10.14
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - macos-latest
+        - ubuntu-latest
+        - windows-latest
     steps:
     - name: Set up Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
+        profile: minimal
         toolchain: stable
-    - name: Check out code
-      uses: actions/checkout@v1
-      with:
-        submodules: true
-    - name: Run all tests
-      run: cargo test
-
-  test-ubuntu:
-    runs-on: ubuntu-18.04
-    steps:
-    - name: Check out code
-      uses: actions/checkout@v1
-      with:
-        submodules: true
-    - name: Run all tests
-      run: cargo test
-
-  test-windows:
-    runs-on: windows-2019
-    steps:
     - name: 'Set up BoringSSL dependencies: Ninja'
+      if: matrix.os == 'windows-latest'
       uses: seanmiddleditch/gha-setup-ninja@master
       with:
         destination: ../ninja-build
     - name: 'Set up BoringSSL dependencies: NASM'
+      if: matrix.os == 'windows-latest'
       uses: ilammy/setup-nasm@v1
     - name: Set up Microsoft Visual C++ environment
+      if: matrix.os == 'windows-latest'
       uses: ilammy/msvc-dev-cmd@v1
     - name: Check out code
       uses: actions/checkout@v1
       with:
         submodules: true
     - name: Run all tests
-      run: cargo test
+      run: cargo test --all
+
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: rustfmt, clippy
+    - name: Check out code
+      uses: actions/checkout@v1
+      with:
+        submodules: true
+    - name: rustfmt --check
+      if: always()
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
+    - name: cargo check
+      if: always()
+      uses: actions-rs/cargo@v1
+      with:
+        command: check
+        args: --all-targets
+    - name: cargo clippy
+      if: always()
+      uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args:  --all --all-targets
+    - name: cargo doc
+      if: always()
+      uses: actions-rs/cargo@v1
+      with:
+        command: doc
+        args: --workspace --no-deps
