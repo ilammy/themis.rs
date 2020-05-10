@@ -6,3 +6,10 @@ authors = ["rust-themis developers"]
 
 [dependencies]
 boringssl = { package = "soter-boringssl", version = "=0.1.0", path = "../soter-boringssl" }
+
+[dev-dependencies]
+criterion = "0.3.0"
+
+[[bench]]
+name = "rand"
+harness = false
