@@ -23,8 +23,7 @@ fn bytes(c: &mut Criterion) {
     let sizes = &[0, 8, 64, 512, 4096, 32768, 262_144, 2_097_152];
     let mut buffer = vec![0; *sizes.iter().max().unwrap()];
 
-    let plot_config = PlotConfiguration::default()
-        .summary_scale(AxisScale::Logarithmic);
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
     let mut group = c.benchmark_group("rand::bytes()");
     group.plot_config(plot_config);
