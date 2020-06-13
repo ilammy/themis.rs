@@ -2,7 +2,7 @@ name: Audit dependencies
 
 on:
   schedule:
-    - cron: '0 6 * * *' # every day at 6:00 UTC
+    - cron: '0 6 * * 6' # every Saturday at 6:00 UTC
 
 jobs:
   audit:
