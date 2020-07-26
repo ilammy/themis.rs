@@ -42,8 +42,9 @@ bindgen bindgen.h \
     --disable-header-comment \
     --no-layout-tests \
     --size_t-is-usize \
-    --whitelist-function "$WHITELIST" \
-    --whitelist-type "$WHITELIST" \
+    --whitelist-function "^($WHITELIST_FUNCS)$" \
+    --whitelist-type "^($WHITELIST_OTHERS)$" \
+    --opaque-type "^($WHITELIST_OTHERS)$" \
     --output src/lib.rs \
     -- \
     -I ./boringssl/include
