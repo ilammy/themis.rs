@@ -46,7 +46,7 @@ impl CRC32C {
 
     /// Updates CRC with new data.
     pub fn update(&mut self, data: impl AsRef<[u8]>) {
-        self.0 = platform::update_crc32c_runtime(self.0, data.as_ref());
+        self.0 = platform::update_crc32c_lazy(self.0, data.as_ref());
     }
 
     /// Finalizes CRC computation and returns checksum.
