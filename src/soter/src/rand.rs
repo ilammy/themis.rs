@@ -14,8 +14,6 @@
 
 //! Generating random data.
 
-use crate::{Error, ErrorKind};
-
 /// Generates pseudo-random bytes.
 ///
 /// This functions generates cryptographically strong pseudo-random bytes and fills
@@ -45,13 +43,8 @@ use crate::{Error, ErrorKind};
 pub fn bytes(buffer: &mut [u8]) {
     if let Err(error) = boringssl::RAND_bytes(buffer) {
         // Normally, BoringSSL will abort on failure, but double-tap just in case.
-        // If we are still alive then follow OpenSSL API for error reporting.
         // One possible case is that the system does not have a CSPRNG available,
         // which is equally fatal for the application.
-        let failure = match error {
-            -1 => Error::with_kind(ErrorKind::NotSupported),
-            _ => Error::with_kind(ErrorKind::Failure),
-        };
-        panic!(format!("failed to generate random bytes: {}", failure))
+        panic!(format!("failed to generate random bytes: {}", error))
     }
 }
