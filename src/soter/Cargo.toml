@@ -9,6 +9,7 @@ boringssl = { package = "soter-boringssl", version = "=0.1.0", path = "../soter-
 
 [dev-dependencies]
 criterion = "0.3.0"
+hex-literal = "0.3.1"
 
 [[bench]]
 name = "crc32"

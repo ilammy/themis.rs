@@ -13,6 +13,7 @@
 // limitations under the License.
 
 pub mod crc;
+pub mod hash;
 pub mod rand;
 
 mod error;
