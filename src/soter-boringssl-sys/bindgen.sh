@@ -8,14 +8,20 @@
 
 set -e
 
-if [ $# -ne 3 ]; then
-    echo "Usage: $0 <major> <minor> <patch>" >&2
-    exit 1
-fi
-
-MAJOR="$1"
-MINOR="$2"
-PATCH="$3"
+case $# in
+    0)
+        read MAJOR MINOR PATCH \
+            <<<$(grep version Cargo.toml | cut -d ' ' -f 3 | tr '".' ' ')
+        ;;
+    3)
+        MAJOR="$1"
+        MINOR="$2"
+        PATCH="$3"
+        ;;
+    *)
+        echo "Usage: $0 [<major> <minor> <patch>]" >&2
+        exit 1
+esac
 
 # Only include the symbols we want. It's important that we take the minimum dependency
 # on BoringSSL since we're not Google and if they decide to introduce breaking changes
