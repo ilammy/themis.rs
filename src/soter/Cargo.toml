@@ -11,6 +11,9 @@ boringssl = { package = "soter-boringssl", version = "=0.1.0", path = "../soter-
 criterion = "0.3.0"
 hex-literal = "0.3.1"
 
+[features]
+long_tests = []
+
 [[bench]]
 name = "crc32"
 harness = false
