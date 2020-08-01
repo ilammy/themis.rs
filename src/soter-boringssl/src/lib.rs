@@ -18,5 +18,5 @@
 mod error;
 mod rand;
 
-pub use error::Result;
+pub use error::{Error, ErrorKind, Result};
 pub use rand::RAND_bytes;
