@@ -96,3 +96,16 @@ impl Error {
         &self.kind
     }
 }
+
+impl From<boringssl::Error> for Error {
+    fn from(other: boringssl::Error) -> Error {
+        // The mapping is mostly one-to-one.
+        let kind = match other.kind() {
+            boringssl::ErrorKind::Failure => ErrorKind::Failure,
+            boringssl::ErrorKind::InvalidParameter => ErrorKind::InvalidParameter,
+            boringssl::ErrorKind::BufferTooSmall(s) => ErrorKind::BufferTooSmall(s),
+            boringssl::ErrorKind::NotSupported => ErrorKind::NotSupported,
+        };
+        Error::with_kind(kind)
+    }
+}
