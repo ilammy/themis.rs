@@ -1,3 +1,14 @@
+EVP_sha256()
+EVP_sha512()
+EVP_DigestInit_ex()
+EVP_DigestFinal_ex()
+EVP_DigestUpdate()
+EVP_MD_CTX_create()
+EVP_MD_CTX_destroy()
+EVP_MD_CTX_size()
 RAND_bytes()
 
 BIGNUM
+ENGINE
+EVP_MD
+EVP_MD_CTX
