@@ -36,7 +36,7 @@ pub struct Error {
 }
 
 /// List of Soter error categories.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum ErrorKind {
     /// General failure.
     ///
@@ -92,8 +92,8 @@ impl Error {
     }
 
     /// Returns the corresponding `ErrorKind` for this error.
-    pub fn kind(&self) -> &ErrorKind {
-        &self.kind
+    pub fn kind(&self) -> ErrorKind {
+        self.kind
     }
 }
 
