@@ -87,7 +87,7 @@ impl fmt::Display for Error {
 
 impl Error {
     /// Constructs a new error of given kind.
-    pub(crate) fn with_kind(kind: ErrorKind) -> Error {
+    pub(crate) fn new(kind: ErrorKind) -> Error {
         Error { kind }
     }
 
@@ -106,6 +106,6 @@ impl From<boringssl::Error> for Error {
             boringssl::ErrorKind::BufferTooSmall(s) => ErrorKind::BufferTooSmall(s),
             boringssl::ErrorKind::NotSupported => ErrorKind::NotSupported,
         };
-        Error::with_kind(kind)
+        Error::new(kind)
     }
 }
