@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::error::{default_error, Result};
+use crate::error::{Result, ResultExt};
 
 /// Puts cryptographically strong pseudo-random bytes into `buf`.
-pub fn RAND_bytes(buf: &mut [u8]) -> Result {
-    let err = unsafe { boringssl::RAND_bytes(buf.as_mut_ptr(), buf.len()) };
-    default_error(err)
+pub fn RAND_bytes(buf: &mut [u8]) -> Result<()> {
+    unsafe { boringssl::RAND_bytes(buf.as_mut_ptr(), buf.len()).maybe_not_supported() }
 }
 
 #[cfg(test)]

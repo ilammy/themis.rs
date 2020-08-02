@@ -36,25 +36,26 @@ pub struct Error {
 }
 
 /// List of Soter error categories.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum ErrorKind {
     /// General failure.
     ///
     /// This is the most common error you’ll encounter. It means that something somewhere
-    /// has gone wrong, probably something is not quite right with the arguments, or the
-    /// state, or the environment. You may or may not be compromised, or be in the process
-    /// of being compromised, or being tricked into doing something that might compromise
-    /// security of the application.
+    /// has gone wrong. The data may be malformed, encryption context does not match, or
+    /// the state of the object is invalid.
+    ///
+    /// This is also a catch-all for all internal issues that we are able to detect,
+    /// such as failure to allocate memory, prevented integer overflow, or malfunction
+    /// in the cryptographic backend.
     Failure,
     /// Invalid parameter.
     ///
     /// Static type system should catch most of these, but sometimes we double-check with
     /// runtime validation, or have no other choice but to verify invariants at runtime.
     ///
-    /// Note that this kind is **not used** to indicate malformed input data in parameters.
-    /// This should have been a compilation error. Typically a programmer’s error is the
-    /// cause of this failure, and it might indicate a bug in the application. Study the
-    /// call site and reread the API documentation for additional insight.
+    /// For example, this error often indicates empty input when a non-empty input is expected.
+    /// However, it **never** indicates corrupted input data, invalid encryption keys, etc.
+    /// That’s what `Failure` is for.
     InvalidParameter,
     /// Buffer is too small.
     ///
@@ -87,12 +88,25 @@ impl fmt::Display for Error {
 
 impl Error {
     /// Constructs a new error of given kind.
-    pub(crate) fn with_kind(kind: ErrorKind) -> Error {
+    pub(crate) fn new(kind: ErrorKind) -> Error {
         Error { kind }
     }
 
     /// Returns the corresponding `ErrorKind` for this error.
-    pub fn kind(&self) -> &ErrorKind {
-        &self.kind
+    pub fn kind(&self) -> ErrorKind {
+        self.kind
+    }
+}
+
+impl From<boringssl::Error> for Error {
+    fn from(other: boringssl::Error) -> Error {
+        // The mapping is mostly one-to-one.
+        let kind = match other.kind() {
+            boringssl::ErrorKind::Failure => ErrorKind::Failure,
+            boringssl::ErrorKind::InvalidParameter => ErrorKind::InvalidParameter,
+            boringssl::ErrorKind::BufferTooSmall(s) => ErrorKind::BufferTooSmall(s),
+            boringssl::ErrorKind::NotSupported => ErrorKind::NotSupported,
+        };
+        Error::new(kind)
     }
 }
