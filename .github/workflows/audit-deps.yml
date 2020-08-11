@@ -13,6 +13,11 @@ jobs:
       # Preinstall a cached version to speed up the build
       - name: Install cargo-audit
         uses: actions-rs/install@v0.1
+        # TODO(ilammy, 2020-08-08): enable this back once "actions-rs/install" is fixed
+        # Currently it fails to install a newer version of cargo-audit because
+        # the binary is already installed in the system.
+        # https://github.com/actions-rs/install/issues/6
+        if: ${{ false }}
         with:
           crate: cargo-audit
           use-tool-cache: true
