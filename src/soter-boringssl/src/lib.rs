@@ -16,7 +16,12 @@
 #![allow(non_snake_case)]
 
 mod error;
+mod hash;
 mod rand;
 
 pub use error::{Error, ErrorKind, Result};
+pub use hash::{
+    EVP_DigestFinal_ex, EVP_DigestInit, EVP_DigestUpdate, EVP_MD_CTX_create, EVP_MD_CTX_size,
+    EVP_sha256, EVP_sha512, EVP_MD, EVP_MD_CTX,
+};
 pub use rand::RAND_bytes;

@@ -8,10 +8,19 @@ authors = ["rust-themis developers"]
 boringssl = { package = "soter-boringssl", version = "=0.1.0", path = "../soter-boringssl" }
 
 [dev-dependencies]
+boringssl-sys = { package = "soter-boringssl-sys", version = "=0.1.0", path = "../soter-boringssl-sys" }
 criterion = "0.3.0"
+hex-literal = "0.3.1"
+
+[features]
+long_tests = []
 
 [[bench]]
 name = "crc32"
+harness = false
+
+[[bench]]
+name = "hash"
 harness = false
 
 [[bench]]
